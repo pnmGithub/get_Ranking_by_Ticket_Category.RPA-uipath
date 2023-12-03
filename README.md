@@ -1,67 +1,61 @@
-## [사무용품 견적서 메일발송]  ##
-> 견적서 발급 요청 메일의 첨부파일에 적힌 물품의 견적서를 작성하여 메일보내기   
-> REFramework로 구현 (QueueItem이 아닌 **MailMessage** 이용)
->  - TransactionData :: 기존=DataTable, 변경=**List-MailMessage**
->  - TransactionItem :: 기존=QueueItem, 변경=**MailMessage**   
+## [일간 공연랭킹 리포트 작성]  ##
+> 예스24 웹사이트에서 일간 공연 랭킹을 추출하여 결과 파일 생성      
+> REFramework로 구현 (QueueItem이 아닌 **List** 이용)
+>  - TransactionData :: 기존=DataTable, 변경=**List<List<String>>**
+>  - TransactionItem :: 기존=QueueItem, 변경=**List<String>**   
 
 
 #### [작업순서] ####
-> _이해를 돕기위한 작업가이드.xlsx 파일 참고
-1. 아웃룩 메일 가져오기 (TransactionData = List-MailMessage 로 사용)
-2. 사무용품 사이트(오피스디포) 접속
-3. 메일 첨부파일(작업지시서) 엑셀파일 저장하기
-4. 작업지시서 읽어서 물품코드 검색, 물품의 수량을 작업지시서 대로 입력, 장바구니에 담기
-5. 장바구니 페이지에서 견적서 PDF로 저장
-6. 견적서 첨부하여 메일 발송. 원본 메일 폴더 이동
+> _자동화설계_프로세스맵구상.xlsx 파일 참고
+1. 예스24 티켓 페이지 접속 > 카테고리 리스트로 가져오기 (TransactionData = List<List<String>> 로 사용. <카테고리명, URL> 저장)
+2. 엑셀파일 사전 생성(카테고리별 시트 생성)
+3. 카테고리별 랭킹 스크래핑 (베스트랭킹+일반랭킹)
+4. 카테고리별 시트에 쓰기
+5. 엑셀 레이아웃 정리
 
 
 #### [Config.xlsx 참고] ####
-* strURL - 오피스디포 사이트 URL
-* strOutlookAccount - 아웃룩 메일 계정
-* strOutlookFolder - 아웃룩 메일가져올 폴더 
-* strOutlookMoveFolder - 아웃룩 메일 폴더 - 처리 완료된 메일 이동 폴더
-* strToMailAccount - 견적서 받을 메일주소
-* strMailSaveFolder - 작업지시서 다운로드 경로
-* strMailSubject - 견적서 보낼 메일 제목
-* strMailBody - 견적서 보낼 메일 내용
-* strPDFFileName - 견적서 pdf 파일명
-* strSaveFolderPath - 파일 저장경로
+* strResultFileName - 결과파일 (티켓랭킹_yyyyMMdd.xlsx)
+* strResultSaveFolder - 결과파일 저장 폴더
+* strWebURL - 데이터 추출할 웹 사이트 정보 (랭킹 링크 바로가기)
 
   
 #### [추가된 파일(Invoke) 정보] ####
-* Framework\CreateFolderFile.xaml - 폴더, 파일 처리. 폴더 있으면 삭제 후 생성, 없으면 생성. 파일 있으면 삭제
-* Framework\GetDateFromString.xaml - 문자열에서 날짜부분 가져오기 (20231121_GetDateFromString.xaml 에서 20231121만 추출)
+* Initalization > Framework\CreateFolderFile.xaml - 폴더, 파일 처리. 폴더 없으면 생성, 파일 있으면 삭제
+* Initalization > Framework\GetFullWebUrl.xaml - URL 정보 세팅 (상대 경로일 경우 도메인 붙여 full 경로 만들기)
+* End Process > Framework\ExcelLayoutStyle.xaml - 엑셀파일 레이아웃 정리
 
 
 #### [How It Works] ####
 
 1. **INITIALIZE PROCESS**
-   + Config.xlsx 세팅
-   + 브라우저 강제 종료
-   + 폴더 처리(폴더 있으면 삭제 후 생성, 없으면 생성)
-   + 아웃룩 메일 읽기 (제목 "견적서", 첨부파일 있음 으로 필터)
-      1. 견적서요청 메일 리스트 TransactionData에 저장
-   + 오피스디포 브라우저 오픈
+   + Config.xlsx 설정
+   + 브라우저(Chrome, Excel) 강제종료
+   + 폴더, 파일 관리(폴더 있으면 삭제 후 생성, 파일 있으면 삭제)
+   + 예스24 티켓 > 랭킹 카테고리 가져오기 (dt_TransactionData에 저장)
+      1. 랭킹 카테고리 가져오기 (Find Children )
+      2. -> List에 입력
+   + 카테고리별 엑셀파일 사전 준비 - 시트 순서대로 작성되도록
 
 2. **GET TRANSACTION DATA**
    + Get transaction item 비활성
-   + TransactionNumber가 TransactionData.Count 수만큼 반복을 위한 처리 - TransactionData의 리스트 갯수 체크해서 TransactionItem에 현재 리스트 정보 할당
+   + 처리할 TransactionItem 체크
 
 4. **PROCESS TRANSACTION**
-   + 메일 첨부파일 중 .xlsx 파일 저장
-   + 저장된 작업지시서.xlsx 파일 읽기. DataTable에 저장
-   + DataTable 반복하면서
-     1. 오피스디포 사이트에서 물품코드 검색
-     2. 상세페이지에서 수량입력, 장바구니에 담기 클릭
-   + 장바구니 클릭, 상품 전체선택 후 pdf 저장. 장바구니 비우기
-   + pdf 첨부하여 메일발송. 견적서 발송 완료 메일 폴더 이동
+   + 카테고리 별 NavigateTo로 랭킹 페이지 이동
+   + Merge용 데이터테이블 생성 - 스크래핑 결과 없을 경우 오류 방지
+   + 베스트 영역 스크래핑 ([랭킹], [공연명], [공연기간 공연장소], [예매율])
+   + 랭킹 영역 스크래핑 ( [랭킹], [공연명], [공연기간 공연장소], [예매율])
+   + DataTable 합치고 컬럼 정리 ([랭킹], [공연명], [공연기간], [공연장소], [예매율])
+   + 카테고리별로 엑셀에 쓰기
 
 4. **END PROCESS**
+   + 엑셀 레이아웃 정리
    + 브라우저 닫기
    + 브라우저 강제 종료
 
 * * *
-![estimate_for_Office_Goods_mailList_guide](https://github.com/pnmGithub/estimate_for_Office_Goods_mailList.RPA-uipath/assets/149296871/314fac58-96bc-40ff-848e-70696d1d508b)
+![get_Ranking_by_Ticket_Category_guide](https://github.com/pnmGithub/get_Ranking_by_Ticket_Category.RPA-uipath/assets/149296871/78036414-caa6-4e44-9697-4029add33be7)
 * * *
 
 ### REFrameWork Template ###
