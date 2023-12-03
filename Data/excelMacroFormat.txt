@@ -1,0 +1,40 @@
+
+'-----------------------------------------------------------------------------
+'    UiPath에서 함수 호출 시 파라미터 전달하기
+'    UiPath > Invoke VBA > 속성 > EntryMethodParameters > 리스트 형태로 전달
+'        사용예)  {"파라미터1", "파라미터2"...}  
+'        함수 파라미터 순서대로 넣어줘야 함
+'        셀 범위 설정할 때 A:A = A 전체, A1:A5 = A1부터 A5까지
+'-----------------------------------------------------------------------------
+
+Sub AllLayoutStyle()
+	On Error Resume Next 			' 에러 발생 시 무시하고 계속 진행
+
+	Dim ws As Worksheet
+	For Each ws In ThisWorkbook.Sheets
+		ws.UsedRange.Font.Size = 10			'폰트 사이즈
+
+		ws.Range("A1:E1").Font.Bold = True		'헤더 글자 굵게
+		ws.Range("A1:E1").Font.Size = 12		'헤더 폰트 사이즈
+		ws.Range("A1:E1").HorizontalAlignment = xlCenter	'헤더 가운데정렬
+		ws.Range("A1:E1").Interior.Color = RGB(194, 203, 246)	'헤더 배경색
+		ws.Range("A1:E1").RowHeight = 30 		'원하는 높이로 설정
+
+		ws.UsedRange.Columns.AutoFit		'Excel Cell 가로사이즈 자동 처리
+
+		' 서식 테두리 넣기
+		Set rng = ws.UsedRange
+		With rng.Borders
+			.LineStyle = xlContinuous 		' 테두리 스타일 설정
+			.Weight = xlThin 			' 테두리 두께 설정
+			.ColorIndex = xlAutomatic 		' 테두리 색 설정
+		end With
+
+	Next ws
+
+	Application.DisplayAlerts = False ' 삭제 경고를 표시하지 않도록 설정
+	Sheets("Sheet1").Select
+    	ActiveWindow.SelectedSheets.Delete
+	Application.DisplayAlerts = False ' 삭제 경고를 표시하지 않도록 설정
+
+End Sub
